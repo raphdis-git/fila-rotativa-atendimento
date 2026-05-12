@@ -16,6 +16,9 @@ const elements = {
   nextClient: document.querySelector("#nextClient"),
   nextAgent: document.querySelector("#nextAgent"),
   callNextBtn: document.querySelector("#callNextBtn"),
+  startServiceForm: document.querySelector("#startServiceForm"),
+  serviceAgentName: document.querySelector("#serviceAgentName"),
+  startServiceMessage: document.querySelector("#startServiceMessage"),
   agentForm: document.querySelector("#agentForm"),
   agentName: document.querySelector("#agentName"),
   clientForm: document.querySelector("#clientForm"),
@@ -99,6 +102,33 @@ function addAgent(name) {
   commit();
 }
 
+function findAgentByName(name) {
+  const normalizedName = normalizeName(name);
+  return state.agents.find((agent) => normalizeName(agent.name) === normalizedName);
+}
+
+function normalizeName(name) {
+  return String(name).trim().toLocaleLowerCase("pt-BR");
+}
+
+function ensureAgent(name) {
+  const existingAgent = findAgentByName(name);
+  if (existingAgent) {
+    existingAgent.active = true;
+    return existingAgent;
+  }
+
+  const agent = {
+    id: createId("agent"),
+    name,
+    active: true,
+    calls: 0
+  };
+  state.agents.push(agent);
+  addHistory(`${name} entrou na equipe de atendimento.`);
+  return agent;
+}
+
 function addClient(name) {
   state.queue.push({
     id: createId("client"),
@@ -109,9 +139,30 @@ function addClient(name) {
   commit();
 }
 
-function callNext() {
+function callNext(requestedAgentName = "") {
+  const requestedAgent = requestedAgentName.trim() ? ensureAgent(requestedAgentName.trim()) : null;
+  const nextAgent = getNextAgent();
+
+  if (!state.queue.length) {
+    setStartMessage("Não há clientes na fila.");
+    commit();
+    return;
+  }
+
+  if (!nextAgent) {
+    setStartMessage("Nenhum atendente ativo para iniciar.");
+    commit();
+    return;
+  }
+
+  if (requestedAgent && requestedAgent.id !== nextAgent.id) {
+    setStartMessage(`A vez agora é de ${nextAgent.name}.`);
+    commit();
+    return;
+  }
+
   const client = state.queue.shift();
-  const agent = getNextAgent();
+  const agent = nextAgent;
 
   if (!client || !agent) return;
 
@@ -125,7 +176,12 @@ function callNext() {
     startedAt: formatTime()
   });
   addHistory(`${client.name} foi chamado por ${agent.name}.`);
+  setStartMessage(`${agent.name} iniciou o atendimento de ${client.name}.`);
   commit();
+}
+
+function setStartMessage(message) {
+  elements.startServiceMessage.textContent = message;
 }
 
 function finishService(serviceId) {
@@ -316,12 +372,12 @@ function renderActiveServices() {
 function renderNextCall() {
   const nextClient = state.queue[0];
   const nextAgent = getNextAgent();
-  const canCall = Boolean(nextClient && nextAgent);
+  const canCall = Boolean(nextClient);
 
   elements.nextClient.textContent = nextClient ? nextClient.name : "Nenhum cliente na fila";
   elements.nextAgent.textContent = nextAgent
     ? `Próximo atendente: ${nextAgent.name}`
-    : "Nenhum atendente ativo para receber chamadas.";
+    : "Digite seu nome para entrar na rotação.";
   elements.callNextBtn.disabled = !canCall;
 }
 
@@ -361,8 +417,14 @@ elements.clientForm.addEventListener("submit", (event) => {
   elements.clientName.focus();
 });
 
-elements.callNextBtn.addEventListener("click", callNext);
 elements.clearHistoryBtn.addEventListener("click", clearHistory);
+
+elements.startServiceForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const name = elements.serviceAgentName.value.trim();
+  if (!name) return;
+  callNext(name);
+});
 
 document.addEventListener("click", (event) => {
   const button = event.target.closest("[data-action]");
