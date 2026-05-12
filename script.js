@@ -3,7 +3,9 @@ const STORAGE_KEY = "filaRotativaAtendimento";
 const initialState = {
   agents: [],
   queue: [],
+  activeServices: [],
   history: [],
+  lastFinished: null,
   lastAgentIndex: -1
 };
 
@@ -26,10 +28,22 @@ const elements = {
   clearHistoryBtn: document.querySelector("#clearHistoryBtn")
 };
 
+elements.mainNextAgent = document.querySelector("#mainNextAgent");
+elements.mainNextClient = document.querySelector("#mainNextClient");
+elements.lastFinishedTitle = document.querySelector("#lastFinishedTitle");
+elements.lastFinishedDetail = document.querySelector("#lastFinishedDetail");
+elements.activeServiceCount = document.querySelector("#activeServiceCount");
+elements.activeServiceList = document.querySelector("#activeServiceList");
+
 function loadState() {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return { ...initialState, ...stored };
+    const hydrated = { ...initialState, ...stored };
+    return {
+      ...hydrated,
+      activeServices: hydrated.activeServices || [],
+      lastFinished: hydrated.lastFinished || null
+    };
   } catch {
     return { ...initialState };
   }
@@ -103,7 +117,32 @@ function callNext() {
 
   agent.calls += 1;
   setLastAgent(agent.id);
+  state.activeServices.push({
+    id: createId("service"),
+    clientName: client.name,
+    agentId: agent.id,
+    agentName: agent.name,
+    startedAt: formatTime()
+  });
   addHistory(`${client.name} foi chamado por ${agent.name}.`);
+  commit();
+}
+
+function finishService(serviceId) {
+  const service = state.activeServices.find((item) => item.id === serviceId);
+  if (!service) return;
+
+  state.activeServices = state.activeServices.filter((item) => item.id !== serviceId);
+  const nextAgent = getNextAgent();
+
+  state.lastFinished = {
+    agentName: service.agentName,
+    clientName: service.clientName,
+    finishedAt: formatTime(),
+    nextAgentName: nextAgent?.name || null
+  };
+
+  addHistory(`${service.agentName} finalizou o atendimento de ${service.clientName}.`);
   commit();
 }
 
@@ -227,6 +266,53 @@ function renderHistory() {
     .join("");
 }
 
+function renderMainBoard() {
+  const nextAgent = getNextAgent();
+  const nextClient = state.queue[0];
+
+  elements.mainNextAgent.textContent = nextAgent ? nextAgent.name : "Nenhum atendente ativo";
+  elements.mainNextClient.textContent = nextClient
+    ? `Próximo cliente: ${nextClient.name}`
+    : "Aguardando cliente na fila.";
+
+  if (state.lastFinished) {
+    elements.lastFinishedTitle.textContent = `${state.lastFinished.agentName} finalizou`;
+    elements.lastFinishedDetail.textContent = state.lastFinished.nextAgentName
+      ? `Atendimento de ${state.lastFinished.clientName} finalizado às ${state.lastFinished.finishedAt}. Próximo: ${state.lastFinished.nextAgentName}.`
+      : `Atendimento de ${state.lastFinished.clientName} finalizado às ${state.lastFinished.finishedAt}.`;
+  } else {
+    elements.lastFinishedTitle.textContent = "Nenhum atendimento finalizado";
+    elements.lastFinishedDetail.textContent = "Finalize um atendimento para atualizar o painel.";
+  }
+}
+
+function renderActiveServices() {
+  elements.activeServiceCount.textContent = state.activeServices.length;
+
+  if (!state.activeServices.length) {
+    elements.activeServiceList.innerHTML = `<div class="empty-state">Nenhum atendimento em andamento.</div>`;
+    return;
+  }
+
+  elements.activeServiceList.innerHTML = state.activeServices
+    .map(
+      (service) => `
+        <div class="row">
+          <div>
+            <div class="row-title">${escapeHtml(service.agentName)} atendendo ${escapeHtml(service.clientName)}</div>
+            <div class="row-subtitle">Início: ${service.startedAt}</div>
+          </div>
+          <div class="row-actions">
+            <button class="small-button success" type="button" data-action="finish-service" data-id="${service.id}">
+              Finalizar
+            </button>
+          </div>
+        </div>
+      `
+    )
+    .join("");
+}
+
 function renderNextCall() {
   const nextClient = state.queue[0];
   const nextAgent = getNextAgent();
@@ -240,6 +326,8 @@ function renderNextCall() {
 }
 
 function render() {
+  renderMainBoard();
+  renderActiveServices();
   renderNextCall();
   renderAgents();
   renderQueue();
@@ -286,7 +374,27 @@ document.addEventListener("click", (event) => {
   if (action === "remove-client") removeClient(id);
   if (action === "move-up") moveClient(id, -1);
   if (action === "move-down") moveClient(id, 1);
+  if (action === "finish-service") finishService(id);
 });
+
+document.querySelectorAll("[data-view-target]").forEach((button) => {
+  button.addEventListener("click", () => switchView(button.dataset.viewTarget));
+});
+
+function switchView(viewName) {
+  const views = {
+    main: document.querySelector("#mainView"),
+    operation: document.querySelector("#operationView")
+  };
+
+  Object.entries(views).forEach(([name, view]) => {
+    view.classList.toggle("active", name === viewName);
+  });
+
+  document.querySelectorAll("[data-view-target]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.viewTarget === viewName);
+  });
+}
 
 function tickClock() {
   elements.clock.textContent = formatTime();
