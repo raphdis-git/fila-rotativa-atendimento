@@ -16,56 +16,89 @@
         <div class="clock" id="clock">--:--</div>
       </header>
 
-      <section class="hero-panel">
-        <div>
-          <span class="label">Próxima chamada</span>
-          <h2 id="nextClient">Nenhum cliente na fila</h2>
-          <p id="nextAgent">Cadastre atendentes e clientes para iniciar.</p>
-        </div>
-        <button class="primary-action" id="callNextBtn" type="button">Chamar próximo</button>
+      <nav class="view-switch" aria-label="Telas do sistema">
+        <button class="view-button active" type="button" data-view-target="main">Tela principal</button>
+        <button class="view-button" type="button" data-view-target="operation">Operação</button>
+      </nav>
+
+      <section class="view active" id="mainView">
+        <section class="main-board">
+          <div class="main-card highlight">
+            <span class="label">Próximo atendente</span>
+            <h2 id="mainNextAgent">Nenhum atendente ativo</h2>
+            <p id="mainNextClient">Aguardando cliente na fila.</p>
+          </div>
+          <div class="main-card">
+            <span class="label">Última finalização</span>
+            <h3 id="lastFinishedTitle">Nenhum atendimento finalizado</h3>
+            <p id="lastFinishedDetail">Finalize um atendimento para atualizar o painel.</p>
+          </div>
+        </section>
+
+        <section class="panel wide-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="label">Em atendimento</span>
+              <h3>Atendimentos ativos</h3>
+            </div>
+            <span class="counter" id="activeServiceCount">0</span>
+          </div>
+          <div class="list" id="activeServiceList"></div>
+        </section>
       </section>
 
-      <section class="dashboard-grid">
-        <article class="panel">
-          <div class="panel-heading">
-            <div>
-              <span class="label">Equipe</span>
-              <h3>Atendentes</h3>
-            </div>
-            <span class="counter" id="agentCount">0</span>
+      <section class="view" id="operationView">
+        <section class="hero-panel">
+          <div>
+            <span class="label">Próxima chamada</span>
+            <h2 id="nextClient">Nenhum cliente na fila</h2>
+            <p id="nextAgent">Cadastre atendentes e clientes para iniciar.</p>
           </div>
-          <form class="inline-form" id="agentForm">
-            <input id="agentName" type="text" placeholder="Nome do atendente" autocomplete="off" required />
-            <button type="submit">Adicionar</button>
-          </form>
-          <div class="list" id="agentList"></div>
-        </article>
+          <button class="primary-action" id="callNextBtn" type="button">Chamar próximo</button>
+        </section>
 
-        <article class="panel">
-          <div class="panel-heading">
-            <div>
-              <span class="label">Espera</span>
-              <h3>Clientes</h3>
+        <section class="dashboard-grid">
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <span class="label">Equipe</span>
+                <h3>Atendentes</h3>
+              </div>
+              <span class="counter" id="agentCount">0</span>
             </div>
-            <span class="counter" id="queueCount">0</span>
-          </div>
-          <form class="inline-form" id="clientForm">
-            <input id="clientName" type="text" placeholder="Nome ou senha" autocomplete="off" required />
-            <button type="submit">Entrar</button>
-          </form>
-          <div class="list queue-list" id="queueList"></div>
-        </article>
+            <form class="inline-form" id="agentForm">
+              <input id="agentName" type="text" placeholder="Nome do atendente" autocomplete="off" required />
+              <button type="submit">Adicionar</button>
+            </form>
+            <div class="list" id="agentList"></div>
+          </article>
 
-        <article class="panel wide-panel">
-          <div class="panel-heading">
-            <div>
-              <span class="label">Registros</span>
-              <h3>Histórico</h3>
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <span class="label">Espera</span>
+                <h3>Clientes</h3>
+              </div>
+              <span class="counter" id="queueCount">0</span>
             </div>
-            <button class="ghost-button" id="clearHistoryBtn" type="button">Limpar</button>
-          </div>
-          <div class="history" id="historyList"></div>
-        </article>
+            <form class="inline-form" id="clientForm">
+              <input id="clientName" type="text" placeholder="Nome ou senha" autocomplete="off" required />
+              <button type="submit">Entrar</button>
+            </form>
+            <div class="list queue-list" id="queueList"></div>
+          </article>
+
+          <article class="panel wide-panel">
+            <div class="panel-heading">
+              <div>
+                <span class="label">Registros</span>
+                <h3>Histórico</h3>
+              </div>
+              <button class="ghost-button" id="clearHistoryBtn" type="button">Limpar</button>
+            </div>
+            <div class="history" id="historyList"></div>
+          </article>
+        </section>
       </section>
     </main>
 
