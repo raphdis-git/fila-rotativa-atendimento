@@ -50,11 +50,15 @@
       <section class="view" id="operationView">
         <section class="hero-panel">
           <div>
-            <span class="label">Próxima chamada</span>
+            <span class="label">Iniciar atendimento</span>
             <h2 id="nextClient">Nenhum cliente na fila</h2>
             <p id="nextAgent">Cadastre atendentes e clientes para iniciar.</p>
           </div>
-          <button class="primary-action" id="callNextBtn" type="button">Chamar próximo</button>
+          <form class="start-form" id="startServiceForm">
+            <input id="serviceAgentName" type="text" placeholder="Seu nome" autocomplete="off" required />
+            <button class="primary-action" id="callNextBtn" type="submit">Iniciar</button>
+            <p id="startServiceMessage" class="form-message"></p>
+          </form>
         </section>
 
         <section class="dashboard-grid">
