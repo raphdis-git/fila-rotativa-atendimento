@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fila Rotativa de Atendimento</title>
+    <title>Rodízio de Suporte Telefônico</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <main class="app-shell">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Atendimento</p>
-          <h1>Fila rotativa</h1>
+          <p class="eyebrow">Suporte telefônico</p>
+          <h1>Rodízio de atendimento</h1>
         </div>
         <div class="clock" id="clock">--:--</div>
       </header>
@@ -22,55 +22,53 @@
       </nav>
 
       <section class="view active" id="mainView">
-        <section class="main-board">
-          <div class="main-card highlight">
-            <span class="label">Próximo atendente</span>
-            <h2 id="mainNextAgent">Nenhum atendente ativo</h2>
-            <p id="mainNextClient">Aguardando cliente na fila.</p>
-          </div>
-          <div class="main-card">
-            <span class="label">Última finalização</span>
-            <h3 id="lastFinishedTitle">Nenhum atendimento finalizado</h3>
-            <p id="lastFinishedDetail">Finalize um atendimento para atualizar o painel.</p>
-          </div>
+        <section class="next-panel">
+          <span class="label">Próximo a atender o telefone</span>
+          <h2 id="currentAgentName">Nenhum atendente ativo</h2>
+          <p id="currentAgentStatus">Configure os atendentes para iniciar o rodízio.</p>
         </section>
 
-        <section class="panel wide-panel">
-          <div class="panel-heading">
-            <div>
-              <span class="label">Em atendimento</span>
-              <h3>Atendimentos ativos</h3>
+        <section class="main-grid">
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <span class="label">Rodízio</span>
+                <h3>Ordem dos atendentes</h3>
+              </div>
             </div>
-            <span class="counter" id="activeServiceCount">0</span>
-          </div>
-          <div class="list" id="activeServiceList"></div>
+            <div class="agent-grid" id="mainAgentList"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <span class="label">Última ligação</span>
+                <h3 id="lastFinishedTitle">Nenhuma finalização</h3>
+              </div>
+            </div>
+            <p class="muted" id="lastFinishedDetail">Quando o atendente finalizar, o próximo aparecerá automaticamente.</p>
+          </article>
         </section>
       </section>
 
       <section class="view" id="operationView">
-        <section class="hero-panel">
+        <section class="panel action-panel">
           <div>
-            <span class="label">Iniciar atendimento</span>
-            <h2 id="nextClient">Nenhum cliente na fila</h2>
-            <p id="nextAgent">Cadastre atendentes e clientes para iniciar.</p>
+            <span class="label">Operação</span>
+            <h2>Finalizar ligação</h2>
+            <p class="muted">Ao terminar uma ligação, o atendente da vez clica em finalizar para passar a vez ao próximo.</p>
           </div>
-          <form class="start-form" id="operatorForm">
-            <input id="serviceAgentName" type="text" placeholder="Seu nome" autocomplete="off" required />
-            <button class="primary-action" id="enterOperatorBtn" type="submit">Entrar</button>
-            <p id="startServiceMessage" class="form-message"></p>
-            <button class="primary-action hidden" id="callNextBtn" type="button">Iniciar atendimento</button>
-            <button class="primary-action hidden" id="finishOwnServiceBtn" type="button">Finalizar atendimento</button>
-          </form>
+          <div class="finish-list" id="finishList"></div>
         </section>
 
-        <section class="dashboard-grid">
+        <section class="main-grid">
           <article class="panel">
             <div class="panel-heading">
               <div>
                 <span class="label">Equipe</span>
                 <h3>Atendentes</h3>
               </div>
-              <span class="counter" id="agentCount">0</span>
+              <button class="ghost-button" id="resetRotationBtn" type="button">Reiniciar rodízio</button>
             </div>
             <form class="inline-form" id="agentForm">
               <input id="agentName" type="text" placeholder="Nome do atendente" autocomplete="off" required />
@@ -80,21 +78,6 @@
           </article>
 
           <article class="panel">
-            <div class="panel-heading">
-              <div>
-                <span class="label">Espera</span>
-                <h3>Clientes</h3>
-              </div>
-              <span class="counter" id="queueCount">0</span>
-            </div>
-            <form class="inline-form" id="clientForm">
-              <input id="clientName" type="text" placeholder="Nome ou senha" autocomplete="off" required />
-              <button type="submit">Entrar</button>
-            </form>
-            <div class="list queue-list" id="queueList"></div>
-          </article>
-
-          <article class="panel wide-panel">
             <div class="panel-heading">
               <div>
                 <span class="label">Registros</span>
