@@ -111,6 +111,10 @@ h1 {
   display: none;
 }
 
+.hidden {
+  display: none !important;
+}
+
 .view.active {
   display: block;
 }
@@ -202,6 +206,29 @@ h1 {
   cursor: not-allowed;
   background: #9aa8a3;
   box-shadow: none;
+}
+
+.start-form {
+  display: grid;
+  gap: 10px;
+  width: min(100%, 260px);
+}
+
+.start-form input {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.form-message {
+  min-height: 38px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 
 .dashboard-grid {
@@ -396,6 +423,10 @@ h1 {
   }
 
   .primary-action {
+    width: 100%;
+  }
+
+  .start-form {
     width: 100%;
   }
 
