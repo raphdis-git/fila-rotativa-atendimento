@@ -116,7 +116,19 @@ h1 {
   display: none;
 }
 
+.hidden {
+  display: none !important;
+}
+
 .view.active {
+  display: block;
+}
+
+.attendant-view {
+  display: none;
+}
+
+.attendant-view.active {
   display: block;
 }
 
@@ -247,6 +259,46 @@ h1 {
 .finish-button.current {
   background: var(--accent);
   box-shadow: 0 12px 28px rgba(4, 120, 87, 0.24);
+}
+
+.attendant-link {
+  display: flex;
+  align-items: center;
+  min-height: 58px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.attendant-panel {
+  min-height: 300px;
+}
+
+.attendant-actions {
+  display: grid;
+  gap: 14px;
+  min-height: auto;
+}
+
+.primary-action {
+  min-height: 68px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.danger-action {
+  background: var(--danger);
+}
+
+.back-link {
+  color: var(--accent-strong);
+  font-weight: 850;
 }
 
 .inline-form {
