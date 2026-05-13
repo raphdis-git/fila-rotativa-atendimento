@@ -54,10 +54,12 @@
             <h2 id="nextClient">Nenhum cliente na fila</h2>
             <p id="nextAgent">Cadastre atendentes e clientes para iniciar.</p>
           </div>
-          <form class="start-form" id="startServiceForm">
+          <form class="start-form" id="operatorForm">
             <input id="serviceAgentName" type="text" placeholder="Seu nome" autocomplete="off" required />
-            <button class="primary-action" id="callNextBtn" type="submit">Iniciar</button>
+            <button class="primary-action" id="enterOperatorBtn" type="submit">Entrar</button>
             <p id="startServiceMessage" class="form-message"></p>
+            <button class="primary-action hidden" id="callNextBtn" type="button">Iniciar atendimento</button>
+            <button class="primary-action hidden" id="finishOwnServiceBtn" type="button">Finalizar atendimento</button>
           </form>
         </section>
 
