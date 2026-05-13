@@ -16,15 +16,15 @@
         <div class="clock" id="clock">--:--</div>
       </header>
 
-      <nav class="view-switch" aria-label="Telas do sistema">
+      <nav class="view-switch" id="mainNav" aria-label="Telas do sistema">
         <button class="view-button active" type="button" data-view-target="main">Tela principal</button>
         <button class="view-button" type="button" data-view-target="operation">Operação</button>
       </nav>
 
       <section class="view active" id="mainView">
         <section class="next-panel">
-          <span class="label">Próximo a atender o telefone</span>
-          <h2 id="currentAgentName">Nenhum atendente ativo</h2>
+          <span class="label">Próximo disponível</span>
+          <h2 id="currentAgentName">Nenhum atendente disponível</h2>
           <p id="currentAgentStatus">Configure os atendentes para iniciar o rodízio.</p>
         </section>
 
@@ -32,8 +32,8 @@
           <article class="panel">
             <div class="panel-heading">
               <div>
-                <span class="label">Rodízio</span>
-                <h3>Ordem dos atendentes</h3>
+                <span class="label">Equipe</span>
+                <h3>Status dos atendentes</h3>
               </div>
             </div>
             <div class="agent-grid" id="mainAgentList"></div>
@@ -42,11 +42,11 @@
           <article class="panel">
             <div class="panel-heading">
               <div>
-                <span class="label">Última ligação</span>
-                <h3 id="lastFinishedTitle">Nenhuma finalização</h3>
+                <span class="label">Última ação</span>
+                <h3 id="lastFinishedTitle">Nenhuma ação registrada</h3>
               </div>
             </div>
-            <p class="muted" id="lastFinishedDetail">Quando o atendente finalizar, o próximo aparecerá automaticamente.</p>
+            <p class="muted" id="lastFinishedDetail">Quando alguém atender ou finalizar, a tela principal atualiza.</p>
           </article>
         </section>
       </section>
@@ -55,10 +55,10 @@
         <section class="panel action-panel">
           <div>
             <span class="label">Operação</span>
-            <h2>Finalizar ligação</h2>
-            <p class="muted">Ao terminar uma ligação, o atendente da vez clica em finalizar para passar a vez ao próximo.</p>
+            <h2>Telas dos atendentes</h2>
+            <p class="muted">Abra uma aba individual para cada atendente. Cada um controla apenas a própria ligação.</p>
           </div>
-          <div class="finish-list" id="finishList"></div>
+          <div class="finish-list" id="attendantLinks"></div>
         </section>
 
         <section class="main-grid">
@@ -87,6 +87,20 @@
             </div>
             <div class="history" id="historyList"></div>
           </article>
+        </section>
+      </section>
+
+      <section class="attendant-view" id="attendantView">
+        <section class="next-panel attendant-panel">
+          <span class="label">Tela do atendente</span>
+          <h2 id="attendantName">Atendente</h2>
+          <p id="attendantStatus">Carregando status...</p>
+        </section>
+
+        <section class="panel attendant-actions">
+          <button class="primary-action" id="startCallBtn" type="button">Atender ligação</button>
+          <button class="primary-action danger-action" id="finishCallBtn" type="button">Finalizar ligação</button>
+          <a class="back-link" href="./">Voltar para tela principal</a>
         </section>
       </section>
     </main>
