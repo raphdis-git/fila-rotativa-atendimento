@@ -4,6 +4,7 @@ const initialState = {
   agents: [],
   queue: [],
   activeServices: [],
+  activeOperatorName: "",
   history: [],
   lastFinished: null,
   lastAgentIndex: -1
@@ -16,8 +17,10 @@ const elements = {
   nextClient: document.querySelector("#nextClient"),
   nextAgent: document.querySelector("#nextAgent"),
   callNextBtn: document.querySelector("#callNextBtn"),
-  startServiceForm: document.querySelector("#startServiceForm"),
+  operatorForm: document.querySelector("#operatorForm"),
   serviceAgentName: document.querySelector("#serviceAgentName"),
+  enterOperatorBtn: document.querySelector("#enterOperatorBtn"),
+  finishOwnServiceBtn: document.querySelector("#finishOwnServiceBtn"),
   startServiceMessage: document.querySelector("#startServiceMessage"),
   agentForm: document.querySelector("#agentForm"),
   agentName: document.querySelector("#agentName"),
@@ -45,6 +48,7 @@ function loadState() {
     return {
       ...hydrated,
       activeServices: hydrated.activeServices || [],
+      activeOperatorName: hydrated.activeOperatorName || "",
       lastFinished: hydrated.lastFinished || null
     };
   } catch {
@@ -177,6 +181,13 @@ function callNext(requestedAgentName = "") {
   });
   addHistory(`${client.name} foi chamado por ${agent.name}.`);
   setStartMessage(`${agent.name} iniciou o atendimento de ${client.name}.`);
+  commit();
+}
+
+function enterOperator(name) {
+  const agent = ensureAgent(name);
+  state.activeOperatorName = agent.name;
+  setStartMessage(`${agent.name} entrou na operação.`);
   commit();
 }
 
@@ -372,13 +383,39 @@ function renderActiveServices() {
 function renderNextCall() {
   const nextClient = state.queue[0];
   const nextAgent = getNextAgent();
-  const canCall = Boolean(nextClient);
+  const activeOperator = findAgentByName(state.activeOperatorName);
+  const ownService = activeOperator
+    ? state.activeServices.find((service) => service.agentId === activeOperator.id)
+    : null;
+  const canStart = Boolean(nextClient && nextAgent && activeOperator && nextAgent.id === activeOperator.id && !ownService);
 
   elements.nextClient.textContent = nextClient ? nextClient.name : "Nenhum cliente na fila";
   elements.nextAgent.textContent = nextAgent
     ? `Próximo atendente: ${nextAgent.name}`
     : "Digite seu nome para entrar na rotação.";
-  elements.callNextBtn.disabled = !canCall;
+
+  elements.callNextBtn.classList.toggle("hidden", !canStart);
+  elements.finishOwnServiceBtn.classList.toggle("hidden", !ownService);
+  elements.enterOperatorBtn.textContent = activeOperator ? "Trocar atendente" : "Entrar";
+
+  if (ownService) {
+    setStartMessage(`${ownService.agentName} está atendendo ${ownService.clientName}.`);
+    return;
+  }
+
+  if (!activeOperator) return;
+
+  if (!nextClient) {
+    setStartMessage(`${activeOperator.name} está na fila de atendentes. Não há clientes aguardando.`);
+    return;
+  }
+
+  if (canStart) {
+    setStartMessage(`${activeOperator.name}, é sua vez. Inicie o atendimento.`);
+    return;
+  }
+
+  setStartMessage(`Aguardando sua vez. Próximo atendente: ${nextAgent?.name || "nenhum"}.`);
 }
 
 function render() {
@@ -417,13 +454,25 @@ elements.clientForm.addEventListener("submit", (event) => {
   elements.clientName.focus();
 });
 
+elements.callNextBtn.addEventListener("click", () => {
+  const name = elements.serviceAgentName.value.trim() || state.activeOperatorName;
+  if (!name) return;
+  callNext(name);
+});
+
+elements.finishOwnServiceBtn.addEventListener("click", () => {
+  const agent = findAgentByName(state.activeOperatorName);
+  const ownService = agent ? state.activeServices.find((service) => service.agentId === agent.id) : null;
+  if (ownService) finishService(ownService.id);
+});
+
 elements.clearHistoryBtn.addEventListener("click", clearHistory);
 
-elements.startServiceForm.addEventListener("submit", (event) => {
+elements.operatorForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const name = elements.serviceAgentName.value.trim();
   if (!name) return;
-  callNext(name);
+  enterOperator(name);
 });
 
 document.addEventListener("click", (event) => {
