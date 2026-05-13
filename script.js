@@ -1,35 +1,45 @@
-const STORAGE_KEY = "rodizioSuporteTelefonico";
+const STORAGE_KEY = "rodizioSuporteTelefonico.v2";
+const params = new URLSearchParams(window.location.search);
+const attendantIdFromUrl = params.get("atendente");
 
 const defaultAgents = ["Atendente 1", "Atendente 2", "Atendente 3", "Atendente 4"].map((name) => ({
   id: createId("agent"),
   name,
   active: true,
+  status: "available",
   calls: 0
 }));
 
 const initialState = {
   agents: defaultAgents,
-  currentAgentId: defaultAgents[0].id,
   history: [],
-  lastFinished: null
+  lastAction: null
 };
 
 let state = loadState();
 
 const elements = {
   clock: document.querySelector("#clock"),
+  mainNav: document.querySelector("#mainNav"),
+  mainView: document.querySelector("#mainView"),
+  operationView: document.querySelector("#operationView"),
+  attendantView: document.querySelector("#attendantView"),
   currentAgentName: document.querySelector("#currentAgentName"),
   currentAgentStatus: document.querySelector("#currentAgentStatus"),
   mainAgentList: document.querySelector("#mainAgentList"),
   lastFinishedTitle: document.querySelector("#lastFinishedTitle"),
   lastFinishedDetail: document.querySelector("#lastFinishedDetail"),
-  finishList: document.querySelector("#finishList"),
+  attendantLinks: document.querySelector("#attendantLinks"),
   agentForm: document.querySelector("#agentForm"),
   agentName: document.querySelector("#agentName"),
   agentList: document.querySelector("#agentList"),
   resetRotationBtn: document.querySelector("#resetRotationBtn"),
   clearHistoryBtn: document.querySelector("#clearHistoryBtn"),
-  historyList: document.querySelector("#historyList")
+  historyList: document.querySelector("#historyList"),
+  attendantName: document.querySelector("#attendantName"),
+  attendantStatus: document.querySelector("#attendantStatus"),
+  startCallBtn: document.querySelector("#startCallBtn"),
+  finishCallBtn: document.querySelector("#finishCallBtn")
 };
 
 function loadState() {
@@ -37,11 +47,14 @@ function loadState() {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (!stored) return structuredClone(initialState);
 
-    const hydrated = { ...initialState, ...stored };
-    if (!hydrated.currentAgentId || !hydrated.agents.some((agent) => agent.id === hydrated.currentAgentId && agent.active)) {
-      hydrated.currentAgentId = getFirstActiveAgent(hydrated.agents)?.id || null;
-    }
-    return hydrated;
+    return {
+      ...initialState,
+      ...stored,
+      agents: (stored.agents || initialState.agents).map((agent) => ({
+        ...agent,
+        status: agent.status || "available"
+      }))
+    };
   } catch {
     return structuredClone(initialState);
   }
@@ -59,47 +72,62 @@ function formatTime(date = new Date()) {
   return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
-function getActiveAgents(agents = state.agents) {
-  return agents.filter((agent) => agent.active);
+function getActiveAgents() {
+  return state.agents.filter((agent) => agent.active);
 }
 
-function getFirstActiveAgent(agents = state.agents) {
-  return agents.find((agent) => agent.active) || null;
+function getAvailableAgents() {
+  return state.agents.filter((agent) => agent.active && agent.status === "available");
 }
 
 function getCurrentAgent() {
-  const current = state.agents.find((agent) => agent.id === state.currentAgentId && agent.active);
-  if (current) return current;
-
-  const firstActive = getFirstActiveAgent();
-  state.currentAgentId = firstActive?.id || null;
-  return firstActive;
+  return getAvailableAgents()[0] || null;
 }
 
-function getNextAgentAfter(agentId) {
-  const activeAgents = getActiveAgents();
-  if (!activeAgents.length) return null;
+function getAgent(agentId) {
+  return state.agents.find((agent) => agent.id === agentId) || null;
+}
 
-  const currentActiveIndex = activeAgents.findIndex((agent) => agent.id === agentId);
-  const nextIndex = currentActiveIndex >= 0 ? (currentActiveIndex + 1) % activeAgents.length : 0;
-  return activeAgents[nextIndex];
+function startCall(agentId) {
+  const agent = getAgent(agentId);
+  const currentAgent = getCurrentAgent();
+  if (!agent || !currentAgent || agent.id !== currentAgent.id) return;
+
+  agent.status = "busy";
+  state.lastAction = {
+    type: "started",
+    agentName: agent.name,
+    time: formatTime()
+  };
+  addHistory(`${agent.name} iniciou uma ligação.`);
+  commit();
 }
 
 function finishCall(agentId) {
-  const currentAgent = getCurrentAgent();
-  if (!currentAgent || currentAgent.id !== agentId) return;
+  const agent = getAgent(agentId);
+  if (!agent || agent.status !== "busy") return;
 
-  currentAgent.calls += 1;
-  const nextAgent = getNextAgentAfter(currentAgent.id);
+  agent.status = "available";
+  agent.calls += 1;
+  moveAgentToEnd(agent.id);
 
-  state.lastFinished = {
-    agentName: currentAgent.name,
-    finishedAt: formatTime(),
-    nextAgentName: nextAgent?.name || null
+  const nextAgent = getCurrentAgent();
+  state.lastAction = {
+    type: "finished",
+    agentName: agent.name,
+    nextAgentName: nextAgent?.name || null,
+    time: formatTime()
   };
-  state.currentAgentId = nextAgent?.id || null;
-  addHistory(`${currentAgent.name} finalizou a ligação. Próximo: ${nextAgent?.name || "nenhum atendente ativo"}.`);
+  addHistory(`${agent.name} finalizou a ligação. Próximo: ${nextAgent?.name || "nenhum atendente disponível"}.`);
   commit();
+}
+
+function moveAgentToEnd(agentId) {
+  const index = state.agents.findIndex((agent) => agent.id === agentId);
+  if (index < 0) return;
+
+  const [agent] = state.agents.splice(index, 1);
+  state.agents.push(agent);
 }
 
 function addAgent(name) {
@@ -109,60 +137,48 @@ function addAgent(name) {
   const existing = state.agents.find((agent) => normalizeName(agent.name) === normalizeName(trimmedName));
   if (existing) {
     existing.active = true;
-    if (!state.currentAgentId) state.currentAgentId = existing.id;
+    existing.status = "available";
     addHistory(`${existing.name} foi reativado no rodízio.`);
     commit();
     return;
   }
 
-  const agent = {
+  state.agents.push({
     id: createId("agent"),
     name: trimmedName,
     active: true,
+    status: "available",
     calls: 0
-  };
-  state.agents.push(agent);
-  if (!state.currentAgentId) state.currentAgentId = agent.id;
-  addHistory(`${agent.name} entrou no rodízio.`);
+  });
+  addHistory(`${trimmedName} entrou no rodízio.`);
   commit();
 }
 
 function toggleAgent(agentId) {
-  const agent = state.agents.find((item) => item.id === agentId);
+  const agent = getAgent(agentId);
   if (!agent) return;
 
   agent.active = !agent.active;
+  if (!agent.active) agent.status = "available";
   addHistory(`${agent.name} ficou ${agent.active ? "ativo" : "pausado"}.`);
-
-  if (!agent.active && state.currentAgentId === agent.id) {
-    state.currentAgentId = getNextAgentAfter(agent.id)?.id || getFirstActiveAgent()?.id || null;
-  }
-
-  if (agent.active && !state.currentAgentId) {
-    state.currentAgentId = agent.id;
-  }
-
   commit();
 }
 
 function removeAgent(agentId) {
-  const agent = state.agents.find((item) => item.id === agentId);
+  const agent = getAgent(agentId);
   if (!agent) return;
 
   state.agents = state.agents.filter((item) => item.id !== agentId);
   addHistory(`${agent.name} foi removido do rodízio.`);
-
-  if (state.currentAgentId === agent.id) {
-    state.currentAgentId = getFirstActiveAgent()?.id || null;
-  }
-
   commit();
 }
 
 function resetRotation() {
-  const firstActive = getFirstActiveAgent();
-  state.currentAgentId = firstActive?.id || null;
-  addHistory(`Rodízio reiniciado${firstActive ? ` em ${firstActive.name}` : ""}.`);
+  state.agents = state.agents.map((agent) => ({
+    ...agent,
+    status: "available"
+  }));
+  addHistory("Rodízio reiniciado.");
   commit();
 }
 
@@ -192,19 +208,22 @@ function commit() {
 function renderMainScreen() {
   const currentAgent = getCurrentAgent();
 
-  elements.currentAgentName.textContent = currentAgent ? currentAgent.name : "Nenhum atendente ativo";
+  elements.currentAgentName.textContent = currentAgent ? currentAgent.name : "Nenhum atendente disponível";
   elements.currentAgentStatus.textContent = currentAgent
     ? `${currentAgent.name} deve atender a próxima ligação.`
-    : "Ative ou cadastre pelo menos um atendente.";
+    : "Todos estão em ligação, pausados ou sem cadastro ativo.";
 
-  if (state.lastFinished) {
-    elements.lastFinishedTitle.textContent = `${state.lastFinished.agentName} finalizou às ${state.lastFinished.finishedAt}`;
-    elements.lastFinishedDetail.textContent = state.lastFinished.nextAgentName
-      ? `Próximo atendente: ${state.lastFinished.nextAgentName}.`
-      : "Não há próximo atendente ativo.";
+  if (state.lastAction) {
+    elements.lastFinishedTitle.textContent =
+      state.lastAction.type === "started"
+        ? `${state.lastAction.agentName} iniciou às ${state.lastAction.time}`
+        : `${state.lastAction.agentName} finalizou às ${state.lastAction.time}`;
+    elements.lastFinishedDetail.textContent = state.lastAction.nextAgentName
+      ? `Próximo disponível: ${state.lastAction.nextAgentName}.`
+      : "Aguardando alguém ficar disponível.";
   } else {
-    elements.lastFinishedTitle.textContent = "Nenhuma finalização";
-    elements.lastFinishedDetail.textContent = "Quando o atendente finalizar, o próximo aparecerá automaticamente.";
+    elements.lastFinishedTitle.textContent = "Nenhuma ação registrada";
+    elements.lastFinishedDetail.textContent = "Quando alguém atender ou finalizar, a tela principal atualiza.";
   }
 }
 
@@ -219,35 +238,34 @@ function renderMainAgentList() {
   elements.mainAgentList.innerHTML = state.agents
     .map((agent, index) => {
       const isCurrent = currentAgent?.id === agent.id;
+      const status = getStatusText(agent);
       return `
         <div class="agent-card ${isCurrent ? "current" : ""}">
           <div class="agent-position">${index + 1}º ${isCurrent ? "· próximo" : ""}</div>
           <div class="agent-name">${escapeHtml(agent.name)}</div>
-          <div class="agent-meta">${agent.active ? "Ativo" : "Pausado"} · ${agent.calls} ligação(ões)</div>
+          <div class="agent-meta">${status} · ${agent.calls} ligação(ões)</div>
         </div>
       `;
     })
     .join("");
 }
 
-function renderFinishButtons() {
-  const currentAgent = getCurrentAgent();
+function renderAttendantLinks() {
   const activeAgents = getActiveAgents();
 
   if (!activeAgents.length) {
-    elements.finishList.innerHTML = `<div class="empty-state">Nenhum atendente ativo para finalizar ligação.</div>`;
+    elements.attendantLinks.innerHTML = `<div class="empty-state">Nenhum atendente ativo.</div>`;
     return;
   }
 
-  elements.finishList.innerHTML = activeAgents
-    .map((agent) => {
-      const isCurrent = currentAgent?.id === agent.id;
-      return `
-        <button class="finish-button ${isCurrent ? "current" : ""}" type="button" data-action="finish-call" data-id="${agent.id}" ${isCurrent ? "" : "disabled"}>
-          ${isCurrent ? `${escapeHtml(agent.name)} · Finalizei a ligação` : `${escapeHtml(agent.name)} · aguardando vez`}
-        </button>
-      `;
-    })
+  elements.attendantLinks.innerHTML = activeAgents
+    .map(
+      (agent) => `
+        <a class="attendant-link" href="?atendente=${encodeURIComponent(agent.id)}" target="_blank" rel="noopener">
+          Abrir tela de ${escapeHtml(agent.name)}
+        </a>
+      `
+    )
     .join("");
 }
 
@@ -263,7 +281,7 @@ function renderAgentConfig() {
         <div class="row">
           <div>
             <div class="row-title">${escapeHtml(agent.name)}</div>
-            <div class="row-subtitle">${agent.active ? "Ativo" : "Pausado"} · ${agent.calls} ligação(ões)</div>
+            <div class="row-subtitle">${getStatusText(agent)} · ${agent.calls} ligação(ões)</div>
           </div>
           <div class="row-actions">
             <button class="small-button secondary" type="button" data-action="toggle-agent" data-id="${agent.id}">
@@ -277,6 +295,44 @@ function renderAgentConfig() {
       `
     )
     .join("");
+}
+
+function renderAttendantView() {
+  if (!attendantIdFromUrl) return;
+
+  const agent = getAgent(attendantIdFromUrl);
+  const currentAgent = getCurrentAgent();
+
+  if (!agent) {
+    elements.attendantName.textContent = "Atendente não encontrado";
+    elements.attendantStatus.textContent = "Volte para a operação e abra uma nova tela.";
+    elements.startCallBtn.disabled = true;
+    elements.finishCallBtn.disabled = true;
+    return;
+  }
+
+  elements.attendantName.textContent = agent.name;
+
+  if (!agent.active) {
+    elements.attendantStatus.textContent = "Você está pausado no rodízio.";
+    elements.startCallBtn.disabled = true;
+    elements.finishCallBtn.disabled = true;
+    return;
+  }
+
+  if (agent.status === "busy") {
+    elements.attendantStatus.textContent = "Você está em ligação.";
+    elements.startCallBtn.disabled = true;
+    elements.finishCallBtn.disabled = false;
+    return;
+  }
+
+  const isCurrent = currentAgent?.id === agent.id;
+  elements.attendantStatus.textContent = isCurrent
+    ? "É sua vez de atender a próxima ligação."
+    : `Aguardando sua vez. Próximo disponível: ${currentAgent?.name || "ninguém"}.`;
+  elements.startCallBtn.disabled = !isCurrent;
+  elements.finishCallBtn.disabled = true;
 }
 
 function renderHistory() {
@@ -297,11 +353,18 @@ function renderHistory() {
     .join("");
 }
 
+function getStatusText(agent) {
+  if (!agent.active) return "Pausado";
+  if (agent.status === "busy") return "Em ligação";
+  return "Disponível";
+}
+
 function render() {
   renderMainScreen();
   renderMainAgentList();
-  renderFinishButtons();
+  renderAttendantLinks();
   renderAgentConfig();
+  renderAttendantView();
   renderHistory();
 }
 
@@ -316,8 +379,8 @@ function escapeHtml(value) {
 
 function switchView(viewName) {
   const views = {
-    main: document.querySelector("#mainView"),
-    operation: document.querySelector("#operationView")
+    main: elements.mainView,
+    operation: elements.operationView
   };
 
   Object.entries(views).forEach(([name, view]) => {
@@ -327,6 +390,14 @@ function switchView(viewName) {
   document.querySelectorAll("[data-view-target]").forEach((button) => {
     button.classList.toggle("active", button.dataset.viewTarget === viewName);
   });
+}
+
+function configureMode() {
+  const isAttendantScreen = Boolean(attendantIdFromUrl);
+  elements.mainNav.classList.toggle("hidden", isAttendantScreen);
+  elements.mainView.classList.toggle("active", !isAttendantScreen);
+  elements.operationView.classList.remove("active");
+  elements.attendantView.classList.toggle("active", isAttendantScreen);
 }
 
 function tickClock() {
@@ -343,12 +414,19 @@ elements.agentForm.addEventListener("submit", (event) => {
 elements.resetRotationBtn.addEventListener("click", resetRotation);
 elements.clearHistoryBtn.addEventListener("click", clearHistory);
 
+elements.startCallBtn.addEventListener("click", () => {
+  if (attendantIdFromUrl) startCall(attendantIdFromUrl);
+});
+
+elements.finishCallBtn.addEventListener("click", () => {
+  if (attendantIdFromUrl) finishCall(attendantIdFromUrl);
+});
+
 document.addEventListener("click", (event) => {
   const button = event.target.closest("[data-action]");
   if (!button) return;
 
   const { action, id } = button.dataset;
-  if (action === "finish-call") finishCall(id);
   if (action === "toggle-agent") toggleAgent(id);
   if (action === "remove-agent") removeAgent(id);
 });
@@ -357,6 +435,12 @@ document.querySelectorAll("[data-view-target]").forEach((button) => {
   button.addEventListener("click", () => switchView(button.dataset.viewTarget));
 });
 
+window.addEventListener("storage", () => {
+  state = loadState();
+  render();
+});
+
+configureMode();
 tickClock();
 setInterval(tickClock, 1000);
 render();
